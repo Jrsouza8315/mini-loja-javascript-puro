@@ -17,6 +17,40 @@ app.get('/', (req, res) =>{
     res.status(200).json({msg:" Bem vindo a nossa API!"})
 })
 
+//Private Route
+app.get("/user/:id", checkToken, async (req, res) => {
+
+    const id = req.params.id
+
+    // check if user exists
+    const user = await User.findById(id, '-password' )
+
+    if(!user) {
+        return res.status(404).json ({ msg: 'Usuário não encontrado'})
+    }
+
+    res.status(200).json({ user })
+})
+
+function checkToken(req, res, net) {
+
+    const authHeader = req.headers["authorization"]
+    const token = authHeader && authHeader.split(" ")[1]
+
+    if (!token) {
+        return res.status(401).json({ msg: 'Acesso Negado!'})
+    }
+
+    try {
+        const secret = process.env.SECRET
+        jwt.verify(token, secret)
+        next()
+    } catch(error) {
+        res.status(400).json({ msg: "Token inválido!"})
+        
+    }
+}
+
 const dbUser = process.env.DB_USER
 const dbPassword = process.env.DB_PASS
 
@@ -97,7 +131,25 @@ app.post("/auth/login", async(req, res) =>{
         if(!checkPassword) {
             return res.status(422).json({ msg: 'Senha inválida!'})
         }
+    
+    try{
+        const secret = process.env.SECRET
+        const token = jwt.sign({
+            id: user._id
+        },
+        secret, 
+        )
 
+           res.status(200).json({ msg: "Autenticação realizada com sucesso!", token})
+
+    }catch(err){
+        console.log(error)
+        res
+        .status(500)
+        .json({
+            msg: 'Aconteceu um eroo no servidor, tente novamente mais tarde!'})
+        
+    }
 })
 
 //Credencials
